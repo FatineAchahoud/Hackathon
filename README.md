@@ -54,25 +54,51 @@ Note: No custom model training in MVP. Use strong prompts and simple rules.
 5. Advocate suggestions page (seeded)
 6. Reservation request form saved in Cloud Firestore
 
-## Step-by-Step Execution Plan (6 Hours)
+## 6-Hour Parallel Work Division (4 People)
 
-1. Setup (45 min)
-Create Next.js app, initialize Firebase project, install Firebase SDK, Firebase Functions, and Gemini SDK.
+### Person 1: Project Setup & Firebase Auth (130 min)
+- Create Next.js app, install Firebase SDK, Firebase Functions, Gemini SDK
+- Initialize Firebase project, enable Email/Password auth
+- Build auth helper functions (login, register, getCurrentUser, logout)
+- Set up auth state management context for Next.js
+- Create basic page layout/navigation structure
 
-2. Auth (45 min)
-Configure Firebase project, enable Email/Password auth, implement login/register.
+### Person 2: Firestore & Seeded Data (150 min)
+- Create Firestore collections: users, contractAnalyses, advocates, reservations, chatHistory
+- Define collection schemas (fields, types, indexes if needed)
+- Set up Firestore security rules (users can read/write own data, advocate public profiles readable)
+- Seed 5–10 advocates with name, specialty, rate, experience in Firestore
+- Build Firestore CRUD helper functions for all collections
 
-3. Database (45 min)
-Create Firestore collections: users, analyses, advocates, reservations, messages.
+### Person 3: Gemini API & Backend (160 min)
+- Set up Firebase Functions project locally
+- Create a callable Firebase Function for contract analysis
+- Write Gemini prompt for Moroccan contract risk analysis (Low/Medium/High)
+- Return JSON with risks array: [{ severity, clause, reason }]
+- Test Gemini API integration locally with sample contracts
 
-4. Contract Analysis (75 min)
-Build Contract Analysis page, call Gemini through Firebase Functions, return structured risks with severity and short reason.
+### Person 4: All Frontend Interfaces (180 min)
+- Build Login page (email, password, role toggle, create account link)
+- Build Register page (email, password, role selection, submit)
+- Build Profile page (display user info, role, logout button)
+- Build Contract Analysis page (text input, submit, display risk output with severity tags)
+- Build Advocate Suggestions page (list advocates from Firestore in cards)
+- Build Reservation page (select advocate, submit reservation, save to Firestore)
+- Build Chat History page (list past analyses and reservations)
+- Add legal disclaimer banner
+- Style with Tailwind CSS for cohesive UX
 
-5. Advocate Flow (45 min)
-Create Advocate Suggestions page with seeded advocates and reservation form.
+### Final Sync (30 min)
+- Test end-to-end flow: Login → Upload Contract → Get Analysis → View Advocates → Reserve → Chat History
+- Deploy Next.js app to Vercel
+- Deploy Firebase Functions
+- Share live demo URL
 
-6. Polish and Demo (45 min)
-Add profile and chat history basics, legal disclaimer, test full flow, deploy app and functions.
+## Blockers to Avoid
+
+- Firestore security rules block reads → test in Firestore emulator first
+- Gemini API quota exhausted → use one shared API key or test with free tier quota
+- Firebase Functions cold start → deploy early for faster testing
 
 ## Suggested Improvements After Hackathon
 
