@@ -1,4 +1,6 @@
 {
+  "name": "hackathon-root",
+  "private": true,
   "scripts": {
     "seed:advocates": "node seed-advocates.js",
     "seed:legal": "node seed-legal-resources.js"

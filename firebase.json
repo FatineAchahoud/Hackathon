@@ -1,22 +1,8 @@
 {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  "emulators": {
-    "ui": {
-      "enabled": false
-    },
-    "singleProjectMode": true
-=======
-=======
->>>>>>> Stashed changes
   "firestore": {
     "database": "(default)",
     "location": "africa-south1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   }
 }
