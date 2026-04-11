@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateAnalysisShape = validateAnalysisShape;
 exports.analyzeContractWithGemini = analyzeContractWithGemini;
+exports.generateChatReply = generateChatReply;
 const generative_ai_1 = require("@google/generative-ai");
 const SYSTEM_INSTRUCTION = `You are "DOC", a Moroccan legal contract risk analysis expert.
 You analyze contracts under Moroccan law and return practical legal risk findings.
@@ -43,6 +44,40 @@ Return ONLY valid JSON object with this schema:
 }
 No markdown and no extra text.`;
 const ALLOWED = ["High", "Medium", "Low"];
+const CHAT_SYSTEM_INSTRUCTION = `You are a helpful Moroccan legal assistant inside a chatbot.
+You help users discuss contract issues, reservations, and general legal questions.
+
+Rules:
+- Keep responses concise, practical, and easy to understand.
+- Focus on Moroccan legal context when relevant.
+- If the user asks for legal advice that needs a licensed advocate, say so clearly.
+- Do not invent facts or legal outcomes.
+- Do not mention internal policies.
+- Respond in the user's preferred language when possible.
+`;
+const CONTRACT_CHAT_SYSTEM_INSTRUCTION = `You are "DOC", a Moroccan legal contract assistant for chatbot users.
+Analyze pasted contract text and identify what appears safe and what appears risky under Moroccan context.
+
+Return ONLY a valid JSON object using this schema:
+{
+  "overall_risk": "High" | "Medium" | "Low",
+  "summary": string,
+  "safe_parts": string[],
+  "risky_parts": [
+    {
+      "severity": "High" | "Medium" | "Low",
+      "clause": string,
+      "reason": string,
+      "suggestion": string
+    }
+  ]
+}
+
+Rules:
+- Be specific to provided text only.
+- Keep safe_parts concise and factual.
+- Keep suggestions actionable.
+- No markdown, no code fences, no extra text.`;
 function validateAnalysisShape(input) {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
         throw new Error("Analysis must be a JSON object.");
@@ -95,6 +130,52 @@ function extractJsonObject(raw) {
         return JSON.parse(text.slice(start, end + 1));
     }
 }
+function looksLikeContractText(text) {
+    const lower = text.toLowerCase();
+    if (text.length >= 350) {
+        return true;
+    }
+    const keywords = [
+        "contract",
+        "agreement",
+        "clause",
+        "party",
+        "parties",
+        "termination",
+        "liability",
+        "confidential",
+        "payment terms",
+        "obligation",
+        "penalty",
+        "governing law",
+        "jurisdiction",
+        "indemn",
+        "force majeure"
+    ];
+    return keywords.some((kw) => lower.includes(kw));
+}
+function formatContractChatReply(input) {
+    const safeLines = input.safeParts.length > 0
+        ? input.safeParts.slice(0, 5).map((item) => `- ${item}`).join("\n")
+        : "- No clearly safe clause was explicitly confirmed from the provided text.";
+    const riskLines = input.riskyParts.length > 0
+        ? input.riskyParts
+            .slice(0, 5)
+            .map((item) => `- [${item.severity}] ${item.clause}: ${item.reason} Suggested fix: ${item.suggestion}`)
+            .join("\n")
+        : "- No major risk detected in the provided text.";
+    return [
+        `Overall risk: ${input.overallRisk}`,
+        "",
+        `Summary: ${input.summary}`,
+        "",
+        "Safe parts:",
+        safeLines,
+        "",
+        "Risky parts:",
+        riskLines
+    ].join("\n");
+}
 async function analyzeContractWithGemini(params) {
     const { apiKey, contractText, contractTypeHint = "", language } = params;
     if (!apiKey) {
@@ -126,4 +207,144 @@ async function analyzeContractWithGemini(params) {
     const raw = result.response.text();
     const parsed = extractJsonObject(raw);
     return validateAnalysisShape(parsed);
+}
+async function generateChatReply(params) {
+    const { apiKey, message, conversationHistory = [], advocateName = "", advocateSpecialty = "", reservationSummary = "", language } = params;
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) {
+        throw new Error("'message' is required.");
+    }
+    if (!apiKey) {
+        return buildFallbackChatReply({
+            message: trimmedMessage,
+            advocateName,
+            advocateSpecialty,
+            reservationSummary,
+            conversationHistory,
+            language
+        });
+    }
+    try {
+        const client = new generative_ai_1.GoogleGenerativeAI(apiKey);
+        if (looksLikeContractText(trimmedMessage)) {
+            const contractModel = client.getGenerativeModel({
+                model: "gemini-1.5-flash",
+                systemInstruction: CONTRACT_CHAT_SYSTEM_INSTRUCTION,
+                generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 1500,
+                    responseMimeType: "application/json"
+                }
+            });
+            const contractPrompt = [
+                language ? `Preferred language: ${language}.` : "",
+                "Analyze this contract text and split findings into safe parts and risky parts.",
+                `Contract text:\n${trimmedMessage}`
+            ]
+                .filter(Boolean)
+                .join("\n\n");
+            const contractResult = await contractModel.generateContent(contractPrompt);
+            const parsed = extractJsonObject(contractResult.response.text());
+            const overallRiskRaw = typeof parsed.overall_risk === "string" ? parsed.overall_risk : "Medium";
+            const overallRisk = ALLOWED.includes(overallRiskRaw) ? overallRiskRaw : "Medium";
+            const summary = typeof parsed.summary === "string"
+                ? parsed.summary
+                : "Contract was analyzed. Review risky clauses before signing.";
+            const safeParts = Array.isArray(parsed.safe_parts)
+                ? parsed.safe_parts.filter((item) => typeof item === "string")
+                : [];
+            const riskyParts = Array.isArray(parsed.risky_parts)
+                ? parsed.risky_parts
+                    .filter((item) => Boolean(item) && typeof item === "object")
+                    .map((item) => {
+                    const severityRaw = typeof item.severity === "string" ? item.severity : "Medium";
+                    const severity = ALLOWED.includes(severityRaw) ? severityRaw : "Medium";
+                    return {
+                        severity,
+                        clause: typeof item.clause === "string" ? item.clause : "Unspecified clause",
+                        reason: typeof item.reason === "string" ? item.reason : "Potential legal uncertainty detected.",
+                        suggestion: typeof item.suggestion === "string" ? item.suggestion : "Clarify this clause with explicit wording."
+                    };
+                })
+                : [];
+            return formatContractChatReply({
+                overallRisk,
+                summary,
+                safeParts,
+                riskyParts
+            });
+        }
+        const model = client.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: CHAT_SYSTEM_INSTRUCTION,
+            generationConfig: {
+                temperature: 0.4,
+                maxOutputTokens: 700
+            }
+        });
+        const historyBlock = conversationHistory
+            .slice(-8)
+            .map((entry) => `${entry.role === "user" ? "User" : "Assistant"}: ${entry.content}`)
+            .join("\n");
+        const prompt = [
+            language ? `Preferred language: ${language}.` : "",
+            advocateName ? `Advocate name: ${advocateName}` : "",
+            advocateSpecialty ? `Advocate specialty: ${advocateSpecialty}` : "",
+            reservationSummary ? `Reservation context: ${reservationSummary}` : "",
+            historyBlock ? `Conversation history:\n${historyBlock}` : "",
+            `User message: ${trimmedMessage}`,
+            "Respond with a single helpful message."
+        ]
+            .filter(Boolean)
+            .join("\n\n");
+        const result = await model.generateContent(prompt);
+        const reply = result.response.text().trim();
+        return reply || buildFallbackChatReply({
+            message: trimmedMessage,
+            advocateName,
+            advocateSpecialty,
+            reservationSummary,
+            conversationHistory,
+            language
+        });
+    }
+    catch {
+        return buildFallbackChatReply({
+            message: trimmedMessage,
+            advocateName,
+            advocateSpecialty,
+            reservationSummary,
+            conversationHistory,
+            language
+        });
+    }
+}
+function buildFallbackChatReply(params) {
+    const { message, advocateName, advocateSpecialty, reservationSummary, conversationHistory } = params;
+    const lower = message.toLowerCase();
+    const contextLine = advocateName || advocateSpecialty
+        ? `I'm reviewing this as ${advocateName || "your assistant"}${advocateSpecialty ? `, focusing on ${advocateSpecialty}` : ""}.`
+        : "I'm reviewing your message in the context of Moroccan contract practice.";
+    if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+        return `${contextLine} Tell me the clause, problem, or question you want me to review.`;
+    }
+    if (lower.includes("payment") || lower.includes("invoice") || lower.includes("fee")) {
+        return `${contextLine} For payment terms, I would check due dates, late-payment penalties, invoice timing, and whether the contract clearly states who pays and when. If you paste the exact clause, I can help rewrite it more clearly.`;
+    }
+    if (lower.includes("termination") || lower.includes("cancel")) {
+        return `${contextLine} For termination clauses, the key points are notice period, cause vs. convenience termination, and what happens to unpaid amounts or ongoing work after cancellation.`;
+    }
+    if (lower.includes("liability") || lower.includes("damages") || lower.includes("indemn")) {
+        return `${contextLine} Liability clauses should clearly limit exposure, define exclusions, and avoid vague unlimited responsibility unless that is intentional.`;
+    }
+    if (lower.includes("confidential") || lower.includes("nda") || lower.includes("privacy")) {
+        return `${contextLine} Confidentiality terms should define what is protected, how long the duty lasts, and any legal exceptions for disclosure.`;
+    }
+    if (lower.includes("reservation") || lower.includes("meeting") || lower.includes("call")) {
+        return `${contextLine} I can help organize the consultation. ${reservationSummary ? `I noted: ${reservationSummary}. ` : ""}Share the clause or issue you want to focus on, and I’ll give you a practical first-pass answer.`;
+    }
+    const historyHint = conversationHistory.length > 0
+        ? "I can also keep the answer aligned with the earlier messages in this conversation."
+        : "";
+    return `${contextLine} ${historyHint} Please paste the clause or explain the issue in one or two sentences, and I’ll give you a clear next step.`.trim();
 }

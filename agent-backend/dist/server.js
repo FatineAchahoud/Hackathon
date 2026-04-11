@@ -6,9 +6,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
+const node_fs_1 = require("node:fs");
+const node_path_1 = __importDefault(require("node:path"));
 const firebase_1 = require("./firebase");
 const gemini_1 = require("./gemini");
-dotenv_1.default.config();
+function loadEnvironment() {
+    const envCandidates = [
+        node_path_1.default.resolve(process.cwd(), "agent-backend", ".env.local"),
+        node_path_1.default.resolve(process.cwd(), "agent-backend", ".env"),
+        node_path_1.default.resolve(process.cwd(), ".env.local"),
+        node_path_1.default.resolve(process.cwd(), ".env")
+    ];
+    for (const envPath of envCandidates) {
+        if ((0, node_fs_1.existsSync)(envPath)) {
+            dotenv_1.default.config({ path: envPath });
+            return;
+        }
+    }
+    dotenv_1.default.config();
+}
+loadEnvironment();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT || 8080);
 const apiKey = process.env.GEMINI_API_KEY?.trim() ?? "";
@@ -16,10 +33,19 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
+function isLocalOrigin(origin) {
+    try {
+        const url = new URL(origin);
+        return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    }
+    catch {
+        return false;
+    }
+}
 app.use(express_1.default.json({ limit: "2mb" }));
 app.use((0, cors_1.default)({
     origin(origin, callback) {
-        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin) || isLocalOrigin(origin)) {
             callback(null, true);
             return;
         }
@@ -71,6 +97,39 @@ app.post("/api/chatbot/analyze-contract", async (req, res) => {
         res.status(500).json({
             ok: false,
             error: "Contract analysis failed. Verify API key, request payload, and model output format."
+        });
+    }
+});
+app.post("/api/chatbot/message", async (req, res) => {
+    try {
+        const body = (req.body ?? {});
+        const message = typeof body.message === "string" ? body.message.trim() : "";
+        if (!message) {
+            res.status(400).json({
+                ok: false,
+                error: "'message' is required."
+            });
+            return;
+        }
+        const reply = await (0, gemini_1.generateChatReply)({
+            apiKey,
+            message,
+            conversationHistory: body.conversationHistory,
+            advocateName: typeof body.advocateName === "string" ? body.advocateName.trim() : "",
+            advocateSpecialty: typeof body.advocateSpecialty === "string" ? body.advocateSpecialty.trim() : "",
+            reservationSummary: typeof body.reservationSummary === "string" ? body.reservationSummary.trim() : "",
+            language: body.language
+        });
+        res.status(200).json({
+            ok: true,
+            reply
+        });
+    }
+    catch (error) {
+        console.error("Chat message request failed", error);
+        res.status(500).json({
+            ok: false,
+            error: "Chat response failed. Verify API key, request payload, and model output format."
         });
     }
 });

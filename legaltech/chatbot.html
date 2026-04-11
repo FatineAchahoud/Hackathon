@@ -558,8 +558,33 @@
             }
         });
 
+        function ensureActiveConversation() {
+            if (currentConversation !== null && conversations[currentConversation]) {
+                return;
+            }
+
+            if (conversations.length === 0) {
+                conversations.push({
+                    id: 'assistant_demo',
+                    advocateId: 'assistant_demo',
+                    advocateName: 'Legal AI Assistant',
+                    advocateSpecialty: 'Moroccan contract guidance',
+                    reservation: {
+                        message: 'Temporary demo chat available without login.'
+                    },
+                    messages: []
+                });
+            }
+
+            openConversation(0);
+        }
+
         function sendMessage() {
-            if (currentConversation === null) return;
+            ensureActiveConversation();
+
+            if (currentConversation === null || !conversations[currentConversation]) {
+                return;
+            }
 
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -641,7 +666,10 @@
                         throw new Error(data.error || 'Backend request failed');
                     }
 
-                    return data.reply;
+                    if (typeof data.reply === 'string' && data.reply.trim()) {
+                        return data.reply;
+                    }
+                    throw new Error('Empty backend reply');
                 } catch (error) {
                     console.warn(`Backend request failed for ${baseUrl}`, error);
                 }

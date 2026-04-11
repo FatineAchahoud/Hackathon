@@ -55,6 +55,30 @@ Rules:
 - Respond in the user's preferred language when possible.
 `;
 
+const CONTRACT_CHAT_SYSTEM_INSTRUCTION = `You are "DOC", a Moroccan legal contract assistant for chatbot users.
+Analyze pasted contract text and identify what appears safe and what appears risky under Moroccan context.
+
+Return ONLY a valid JSON object using this schema:
+{
+  "overall_risk": "High" | "Medium" | "Low",
+  "summary": string,
+  "safe_parts": string[],
+  "risky_parts": [
+    {
+      "severity": "High" | "Medium" | "Low",
+      "clause": string,
+      "reason": string,
+      "suggestion": string
+    }
+  ]
+}
+
+Rules:
+- Be specific to provided text only.
+- Keep safe_parts concise and factual.
+- Keep suggestions actionable.
+- No markdown, no code fences, no extra text.`;
+
 export function validateAnalysisShape(input: unknown): ContractAnalysis {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("Analysis must be a JSON object.");
@@ -114,6 +138,68 @@ function extractJsonObject(raw: string): unknown {
     }
     return JSON.parse(text.slice(start, end + 1));
   }
+}
+
+function looksLikeContractText(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (text.length >= 350) {
+    return true;
+  }
+
+  const keywords = [
+    "contract",
+    "agreement",
+    "clause",
+    "party",
+    "parties",
+    "termination",
+    "liability",
+    "confidential",
+    "payment terms",
+    "obligation",
+    "penalty",
+    "governing law",
+    "jurisdiction",
+    "indemn",
+    "force majeure"
+  ];
+
+  return keywords.some((kw) => lower.includes(kw));
+}
+
+function formatContractChatReply(input: {
+  overallRisk: Severity;
+  summary: string;
+  safeParts: string[];
+  riskyParts: Array<{
+    severity: Severity;
+    clause: string;
+    reason: string;
+    suggestion: string;
+  }>;
+}): string {
+  const safeLines = input.safeParts.length > 0
+    ? input.safeParts.slice(0, 5).map((item) => `- ${item}`).join("\n")
+    : "- No clearly safe clause was explicitly confirmed from the provided text.";
+
+  const riskLines = input.riskyParts.length > 0
+    ? input.riskyParts
+      .slice(0, 5)
+      .map((item) => `- [${item.severity}] ${item.clause}: ${item.reason} Suggested fix: ${item.suggestion}`)
+      .join("\n")
+    : "- No major risk detected in the provided text.";
+
+  return [
+    `Overall risk: ${input.overallRisk}`,
+    "",
+    `Summary: ${input.summary}`,
+    "",
+    "Safe parts:",
+    safeLines,
+    "",
+    "Risky parts:",
+    riskLines
+  ].join("\n");
 }
 
 export async function analyzeContractWithGemini(params: {
@@ -195,6 +281,62 @@ export async function generateChatReply(params: {
 
   try {
     const client = new GoogleGenerativeAI(apiKey);
+
+    if (looksLikeContractText(trimmedMessage)) {
+      const contractModel = client.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: CONTRACT_CHAT_SYSTEM_INSTRUCTION,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 1500,
+          responseMimeType: "application/json"
+        }
+      });
+
+      const contractPrompt = [
+        language ? `Preferred language: ${language}.` : "",
+        "Analyze this contract text and split findings into safe parts and risky parts.",
+        `Contract text:\n${trimmedMessage}`
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const contractResult = await contractModel.generateContent(contractPrompt);
+      const parsed = extractJsonObject(contractResult.response.text()) as Record<string, unknown>;
+
+      const overallRiskRaw = typeof parsed.overall_risk === "string" ? parsed.overall_risk : "Medium";
+      const overallRisk = ALLOWED.includes(overallRiskRaw as Severity) ? overallRiskRaw as Severity : "Medium";
+      const summary = typeof parsed.summary === "string"
+        ? parsed.summary
+        : "Contract was analyzed. Review risky clauses before signing.";
+
+      const safeParts = Array.isArray(parsed.safe_parts)
+        ? parsed.safe_parts.filter((item): item is string => typeof item === "string")
+        : [];
+
+      const riskyParts = Array.isArray(parsed.risky_parts)
+        ? parsed.risky_parts
+          .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+          .map((item) => {
+            const severityRaw = typeof item.severity === "string" ? item.severity : "Medium";
+            const severity = ALLOWED.includes(severityRaw as Severity) ? severityRaw as Severity : "Medium";
+            return {
+              severity,
+              clause: typeof item.clause === "string" ? item.clause : "Unspecified clause",
+              reason: typeof item.reason === "string" ? item.reason : "Potential legal uncertainty detected.",
+              suggestion: typeof item.suggestion === "string" ? item.suggestion : "Clarify this clause with explicit wording."
+            };
+          })
+        : [];
+
+      return formatContractChatReply({
+        overallRisk,
+        summary,
+        safeParts,
+        riskyParts
+      });
+    }
+
     const model = client.getGenerativeModel({
       model: "gemini-1.5-flash",
       systemInstruction: CHAT_SYSTEM_INSTRUCTION,
