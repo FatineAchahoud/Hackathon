@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 # Dependencies
 node_modules/
 **/node_modules/
@@ -25,6 +26,8 @@ agent-backend/.env.local
 
 
 =======
+=======
+>>>>>>> Stashed changes
 # Logs
 logs
 *.log
@@ -97,4 +100,7 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 .env.local
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
