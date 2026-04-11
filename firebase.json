@@ -1,0 +1,8 @@
+{
+  "emulators": {
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

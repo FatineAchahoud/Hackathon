@@ -2,6 +2,9 @@
 
 AI legal assistant for Moroccan contracts, connecting clients with real advocates.
 
+Current repository state: this repo currently contains the standalone backend service in `agent-backend/`.
+The frontend and Firebase Functions app described below are part of the broader project plan but are not included here yet.
+
 ## Product Summary
 
 - Clients paste a contract and get AI risk analysis (Low, Medium, High)
@@ -29,11 +32,11 @@ AI legal assistant for Moroccan contracts, connecting clients with real advocate
 
 ## Technologies
 
-- Frontend: Next.js + TypeScript + Tailwind CSS
-- Backend: Firebase Functions (HTTPS callable endpoints)
+- Frontend (planned): Next.js + TypeScript + Tailwind CSS
+- Backend (current in this repo): Node.js + Express + TypeScript (standalone service)
 - Auth and Database: Firebase Authentication + Cloud Firestore (https://firebase.google.com)
 - AI: Gemini API
-- Deployment: Vercel (app) + Firebase
+- Deployment (planned): Vercel (app) + Firebase
 
 ## Backend Scope (MVP)
 
@@ -42,6 +45,13 @@ AI legal assistant for Moroccan contracts, connecting clients with real advocate
 - Contract analysis storage in Cloud Firestore
 - Advocate suggestions from seeded data
 - Reservation request creation
+
+## Included in This Repo Today
+
+- `agent-backend/` standalone API service
+- `GET /health`
+- `POST /api/chatbot/analyze-contract`
+- Optional Firestore persistence when Firebase service-account environment variables are configured
 
 Note: No custom model training in MVP. Use strong prompts and simple rules.
 
