@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - LegalTech Morocco</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-50">
+        <!-- Navigation Bar -->
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="text-2xl font-bold text-blue-600">LegalTech Morocco</div>
+                <div class="hidden md:flex gap-6 items-center">
+                    <a href="analyze.html" class="text-gray-700 hover:text-blue-600">Contract Analysis</a>
+                    <a href="advocates.html" class="text-gray-700 hover:text-blue-600">Advocates</a>
+                    <a href="chat-history.html" class="text-gray-700 hover:text-blue-600">History</a>
+                    <a href="profile.html" class="text-gray-700 hover:text-blue-600">Profile</a>
+                </div>
+                <div class="flex gap-4 items-center">
+                    <span id="userEmail" class="text-sm text-gray-600"></span>
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="max-w-2xl mx-auto p-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">My Profile</h1>
+
+            <!-- Profile Card -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <!-- Avatar -->
+                <div class="flex justify-center mb-8">
+                    <div id="avatarPlaceholder" class="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center text-4xl font-bold">
+                        U
+                    </div>
+                </div>
+
+                <!-- User Info -->
+                <div class="space-y-6">
+                    <!-- Email -->
+                    <div class="border-b pb-4">
+                        <label class="text-sm font-medium text-gray-500 uppercase">Email Address</label>
+                        <p id="displayEmail" class="text-xl text-gray-800 mt-2">user@example.com</p>
+                    </div>
+
+                    <!-- Role -->
+                    <div class="border-b pb-4">
+                        <label class="text-sm font-medium text-gray-500 uppercase">Account Type</label>
+                        <div class="mt-2">
+                            <span id="roleDisplay" class="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-semibold">Client</span>
+                        </div>
+                    </div>
+
+                    <!-- Account Created -->
+                    <div class="border-b pb-4">
+                        <label class="text-sm font-medium text-gray-500 uppercase">Account Created</label>
+                        <p id="createdDate" class="text-gray-800 mt-2">Loading...</p>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="pb-4">
+                        <label class="text-sm font-medium text-gray-500 uppercase">Status</label>
+                        <p class="text-green-600 mt-2 flex items-center">
+                            <span class="w-3 h-3 bg-green-600 rounded-full mr-2"></span>
+                            Active
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Logout Button -->
+                <div class="mt-8 pt-6 border-t">
+                    <button id="logoutBtnMain" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition duration-200">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Contract Analysis Stats -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Contract Analyses</h3>
+                    <div class="text-3xl font-bold text-blue-600" id="analysisCount">0</div>
+                    <p class="text-gray-600 text-sm mt-2">Total contracts analyzed</p>
+                </div>
+
+                <!-- Reservation Stats -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Reservations</h3>
+                    <div class="text-3xl font-bold text-green-600" id="reservationCount">0</div>
+                    <p class="text-gray-600 text-sm mt-2">Total reservation requests</p>
+                </div>
+            </div>
+
+            <!-- Legal Disclaimer -->
+            <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-gray-700">
+                <strong>⚠️ Legal Notice:</strong> AI analysis is not final legal advice. Please consult with a licensed advocate for important decisions.
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="firestore.js"></script>
+    <script>
+        // Check authentication
+        async function initProfile() {
+            const user = await getCurrentUser();
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Display user info
+            document.getElementById('userEmail').textContent = user.email;
+            document.getElementById('displayEmail').textContent = user.email;
+            document.getElementById('roleDisplay').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+            
+            // Avatar initials
+            const initials = user.email.substring(0, 2).toUpperCase();
+            document.getElementById('avatarPlaceholder').textContent = initials;
+
+            // Created date
+            if (user.createdAt) {
+                const date = new Date(user.createdAt);
+                document.getElementById('createdDate').textContent = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+
+            // Load stats
+            try {
+                const analysisCount = await getContractAnalysesCount(user.uid);
+                const reservationCount = await getReservationsCount(user.uid);
+                document.getElementById('analysisCount').textContent = analysisCount;
+                document.getElementById('reservationCount').textContent = reservationCount;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Logout handlers
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+        document.getElementById('logoutBtnMain').addEventListener('click', handleLogout);
+
+        async function handleLogout() {
+            const result = await logout();
+            if (result.success) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Initialize on load
+        initProfile();
+    </script>
+</body>
+</html>
