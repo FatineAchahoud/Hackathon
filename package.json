@@ -2,12 +2,22 @@
   "name": "hackathon-root",
   "private": true,
   "scripts": {
-    "seed:advocates": "node seed-advocates.js",
-    "seed:legal": "node seed-legal-resources.js"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:web\" \"npm run dev:next\"",
+    "dev:backend": "npm --prefix agent-backend run dev",
+    "dev:web": "http-server apps/static-web -p 8000 -c-1",
+    "dev:next": "npm --prefix apps/web-next run dev",
+    "build": "npm --prefix agent-backend run build && npm --prefix apps/web-next run build",
+    "seed:advocates": "node data/seed-advocates.js",
+    "seed:legal": "node data/seed-legal-resources.js"
   },
   "dependencies": {
     "firebase": "^12.12.0",
     "firebase-admin": "^13.8.0",
     "firebase-tools": "^15.14.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "http-server": "^14.1.1"
   }
 }

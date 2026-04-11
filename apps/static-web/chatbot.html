@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - LegalTech Morocco</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f9fafb;
+        }
+
+        .chatbot-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chatbot-header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .header-title {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.875rem;
+        }
+
+        .header-subtitle {
+            color: #6b7280;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .back-button {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #3b82f6;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-button:hover {
+            background: #e5e7eb;
+        }
+
+        .chatbot-main {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+            padding: 20px 30px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .conversations-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conversations-header {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .conversation-item:hover {
+            background: #f9fafb;
+        }
+
+        .conversation-item.active {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding-left: 11px;
+        }
+
+        .conversation-name {
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .conversation-specialty {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin: 5px 0 0 0;
+        }
+
+        .no-conversations {
+            padding: 30px 15px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .chat-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #1f2937;
+            min-height: 24px;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6b7280;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 12px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .message.assistant .message-bubble {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .message-content {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .message-content a {
+            color: inherit;
+            text-decoration: underline;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 9999px;
+            background: #9ca3af;
+            animation: blink 1.2s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% {
+                opacity: 0.2;
+                transform: translateY(0);
+            }
+            40% {
+                opacity: 1;
+                transform: translateY(-1px);
+            }
+        }
+
+        .input-area {
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        #messageInput:disabled {
+            background: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+        #sendBtn {
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        #sendBtn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .info-banner {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            color: #1e40af;
+            font-size: 0.9rem;
+        }
+
+        .info-banner strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .chatbot-main {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .conversations-panel {
+                max-height: 200px;
+                order: 2;
+            }
+
+            .chat-panel {
+                order: 1;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .chatbot-header {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <!-- Header -->
+        <div class="chatbot-header">
+            <div class="header-content">
+                <div>
+                    <h1 class="header-title">AI Contract Analyzer</h1>
+                    <p class="header-subtitle">Analyze contract risks and get lawyer guidance</p>
+                </div>
+                <a href="dashboard.html" class="back-button">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chatbot-main">
+            <!-- Conversations Panel -->
+            <div class="conversations-panel">
+                <div class="conversations-header">AI Assistant</div>
+                <div class="conversations-list" id="conversationsList">
+                    <div class="no-conversations">
+                        <p>AI Contract Analyzer</p>
+                        <p style="font-size: 0.85rem;">Paste contract text to start analysis</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel">
+                <div class="chat-header" id="chatHeader">AI Contract Analyzer</div>
+                
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <p>Paste contract text to start analysis</p>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Type your message..."
+                    >
+                    <button id="sendBtn">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Banner -->
+        <div style="padding: 0 30px 20px 30px;">
+            <div class="info-banner">
+                <strong>How to use:</strong> Paste a contract snippet (50+ characters). The AI will flag risky clauses and suggest the type of lawyer to consult before booking.
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        const ANALYZE_ENDPOINTS = [
+            'http://localhost:8080/api/chatbot/analyze-contract',
+            'http://127.0.0.1:8080/api/chatbot/analyze-contract',
+            'http://localhost:5000/api/chatbot/analyze-contract'
+        ];
+        const ANALYZE_REQUEST_TIMEOUT_MS = 8000;
+        const messages = [
+            {
+                sender: 'assistant',
+                text: 'Paste a contract clause and I will identify risky points, then suggest what lawyer profile to consult.',
+                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+            }
+        ];
+        let currentUser = null;
+
+        async function initChatbot() {
+            currentUser = await getCurrentUser();
+
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.getElementById('chatHeader').textContent = 'AI Contract Analyzer';
+            renderConversationsList();
+            renderMessages();
+
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        function renderConversationsList() {
+            const list = document.getElementById('conversationsList');
+            list.innerHTML = `
+                <div class="conversation-item active">
+                    <p class="conversation-name">AI Contract Analyzer</p>
+                    <p class="conversation-specialty">Risk review and lawyer recommendation</p>
+                </div>
+            `;
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            
+            container.innerHTML = '';
+
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <p>Paste a contract snippet to analyze risk.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.sender === 'user' ? 'user' : 'assistant'}`;
+                div.innerHTML = `
+                    <div>
+                        <div class="message-bubble">
+                            <p class="message-content">${escapeHtml(msg.text)}</p>
+                            <div class="message-time">${msg.time}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', handleSendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        });
+
+        async function handleSendMessage(e) {
+            if (e) {
+                e.preventDefault();
+            }
+
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            messages.push({
+                sender: 'user',
+                text: text,
+                time: time
+            });
+
+            input.value = '';
+            renderMessages();
+
+            const typingMessage = {
+                sender: 'assistant',
+                text: 'Analyzing contract risk...',
+                time: time,
+                typing: true
+            };
+
+            messages.push(typingMessage);
+            renderMessages();
+
+            try {
+                const reply = await analyzeContractText(text);
+                messages.splice(messages.indexOf(typingMessage), 1);
+                messages.push({
+                    sender: 'assistant',
+                    text: reply,
+                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                });
+                renderMessages();
+            } catch (error) {
+                messages.splice(messages.indexOf(typingMessage), 1);
+                messages.push({
+                    sender: 'assistant',
+                    text: `I could not analyze this right now: ${error.message}`,
+                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                });
+                renderMessages();
+            }
+        }
+
+        async function analyzeContractText(text) {
+            if (text.length < 50) {
+                return 'Please paste at least 50 characters from the contract so I can run a useful legal risk analysis.';
+            }
+
+            for (const endpoint of ANALYZE_ENDPOINTS) {
+                let timeoutId;
+                try {
+                    const controller = new AbortController();
+                    timeoutId = setTimeout(() => controller.abort(), ANALYZE_REQUEST_TIMEOUT_MS);
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            contractText: text,
+                            contractTypeHint: 'general',
+                            language: 'en',
+                            userId: currentUser?.uid || undefined
+                        })
+                    });
+                    clearTimeout(timeoutId);
+
+                    const data = await response.json();
+                    console.log('Analyze response:', {
+                        endpoint,
+                        status: response.status,
+                        ok: response.ok,
+                        data
+                    });
+
+                    if (!response.ok || !data.ok) {
+                        throw new Error(data.error || 'Backend request failed');
+                    }
+
+                    if (data.analysis) {
+                        return formatAnalysisReply(data.analysis);
+                    }
+
+                    throw new Error('Analysis response was empty');
+                } catch (error) {
+                    console.warn(`Analyze request failed for ${endpoint}`, error?.name === 'AbortError' ? 'Request timed out' : error);
+                } finally {
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                }
+            }
+
+            return buildFallbackAnalysisReply(text);
+        }
+
+        function formatAnalysisReply(analysis) {
+            const risks = Array.isArray(analysis.risks) ? analysis.risks : [];
+            const topRisks = risks.slice(0, 3);
+            const highCount = risks.filter((r) => r.severity === 'High').length;
+            const mediumCount = risks.filter((r) => r.severity === 'Medium').length;
+
+            const recommendedProfile = highCount > 0
+                ? 'A contract litigation lawyer with strong dispute-resolution experience.'
+                : mediumCount > 0
+                    ? 'A business contract lawyer for clause negotiation and cleanup.'
+                    : 'A general corporate lawyer for final legal validation.';
+
+            const riskLines = topRisks.length > 0
+                ? topRisks.map((risk, index) => `${index + 1}. [${risk.severity}] ${risk.clause}: ${risk.reason}`).join('\n')
+                : 'No specific risk items were returned.';
+
+            return [
+                `Contract type: ${analysis.contract_type || 'Unknown'}`,
+                `Overall risk: ${analysis.overall_risk || 'Unknown'}`,
+                '',
+                `Summary: ${analysis.summary || 'No summary returned.'}`,
+                '',
+                'Main risks:',
+                riskLines,
+                '',
+                'Recommended lawyer profile:',
+                recommendedProfile,
+                'Next step: open Advocates and compare profiles before booking.'
+            ].join('\n');
+        }
+
+        function buildFallbackAnalysisReply(message) {
+            const lower = message.toLowerCase();
+
+            if (lower.includes('payment') || lower.includes('invoice') || lower.includes('fee')) {
+                return 'Potential risk area: payment terms. Check due dates, penalties, invoicing schedule, and acceptance milestones. Recommended lawyer: business contract lawyer.';
+            }
+
+            if (lower.includes('termination') || lower.includes('cancel')) {
+                return 'Potential risk area: termination rights. Check notice period, cause requirements, and post-termination obligations. Recommended lawyer: contract dispute lawyer.';
+            }
+
+            if (lower.includes('liability') || lower.includes('indemn')) {
+                return 'Potential risk area: liability and indemnity. Check caps, exclusions, and unlimited liability clauses. Recommended lawyer: commercial litigation lawyer.';
+            }
+
+            return 'I could not reach the AI backend right now. Preliminary recommendation: review payment terms, liability caps, termination rights, and dispute resolution clauses with a contract lawyer before booking.';
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        // Initialize on page load
+        initChatbot();
+    </script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - LegalTech Morocco</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-950 flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <!-- Logo/Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white mb-2">LegalTech Morocco</h1>
+                <p class="text-blue-200">Create Your Account</p>
+            </div>
+
+            <!-- Register Card -->
+            <div class="bg-white rounded-lg shadow-2xl p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Sign Up</h2>
+
+                <!-- Error Messages -->
+                <div id="errorMessage" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm"></div>
+                <div id="successMessage" class="hidden mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded text-sm"></div>
+
+                <form id="registerForm" class="space-y-4">
+                    <!-- Email Input -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            placeholder="you@example.com"
+                        >
+                        <p id="emailError" class="text-red-500 text-xs mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            placeholder="At least 8 characters"
+                        >
+                        <p id="passwordError" class="text-red-500 text-xs mt-1 hidden"></p>
+                        <div class="mt-2 text-xs text-gray-500">
+                            <ul>
+                                <li id="lengthCheck" class="flex items-center">
+                                    <span class="text-gray-400 mr-2">✓</span> At least 8 characters
+                                </li>
+                                <li id="uppercaseCheck" class="flex items-center">
+                                    <span class="text-gray-400 mr-2">✓</span> One uppercase letter
+                                </li>
+                                <li id="numberCheck" class="flex items-center">
+                                    <span class="text-gray-400 mr-2">✓</span> One number
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            name="confirmPassword" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            placeholder="••••••••"
+                        >
+                        <p id="confirmError" class="text-red-500 text-xs mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Register As</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="role" 
+                                    value="client" 
+                                    checked
+                                    class="w-4 h-4 text-blue-600"
+                                >
+                                <span class="ml-2 text-gray-700">Client</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="role" 
+                                    value="lawyer"
+                                    class="w-4 h-4 text-blue-600"
+                                >
+                                <span class="ml-2 text-gray-700">Lawyer</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button 
+                        type="submit"
+                        id="submitBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 mt-6"
+                    >
+                        Create Account
+                    </button>
+                </form>
+
+                <!-- Sign In Link -->
+                <p class="text-center text-gray-600 mt-4">
+                    Already have an account? 
+                    <a href="index.html" class="text-blue-600 hover:text-blue-700 font-semibold">Sign in</a>
+                </p>
+            </div>
+
+            <!-- Legal Disclaimer -->
+            <div class="mt-6 text-center text-blue-200 text-xs">
+                <p>© 2026 LegalTech Morocco. AI analysis is not final legal advice.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+
+        // Password strength validation
+        passwordInput.addEventListener('input', () => {
+            const password = passwordInput.value;
+            document.getElementById('lengthCheck').className = password.length >= 8 
+                ? 'flex items-center text-green-600' : 'flex items-center';
+            document.getElementById('uppercaseCheck').className = /[A-Z]/.test(password)
+                ? 'flex items-center text-green-600' : 'flex items-center';
+            document.getElementById('numberCheck').className = /[0-9]/.test(password)
+                ? 'flex items-center text-green-600' : 'flex items-center';
+        });
+
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const role = document.querySelector('input[name="role"]:checked').value;
+
+            // Reset error messages
+            document.getElementById('emailError').classList.add('hidden');
+            document.getElementById('passwordError').classList.add('hidden');
+            document.getElementById('confirmError').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+
+            let hasError = false;
+
+            // Validate email format
+            if (!email.includes('@')) {
+                showFieldError('emailError', 'Please enter a valid email address');
+                hasError = true;
+            }
+
+            // Validate password strength
+            if (password.length < 8) {
+                showFieldError('passwordError', 'Password must be at least 8 characters');
+                hasError = true;
+            }
+            if (!/[A-Z]/.test(password)) {
+                showFieldError('passwordError', 'Password must contain at least one uppercase letter');
+                hasError = true;
+            }
+            if (!/[0-9]/.test(password)) {
+                showFieldError('passwordError', 'Password must contain at least one number');
+                hasError = true;
+            }
+
+            // Validate password match
+            if (password !== confirmPassword) {
+                showFieldError('confirmError', 'Passwords do not match');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            try {
+                const result = await register(email, password, role);
+                if (result.success) {
+                    document.getElementById('successMessage').textContent = 'Account created! Redirecting to login...';
+                    document.getElementById('successMessage').classList.remove('hidden');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                } else {
+                    showError(result.error || 'Registration failed');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        function showFieldError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

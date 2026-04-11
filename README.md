@@ -1,124 +1,126 @@
-# LegalTech Morocco - Hackathon Project
+# LegalTech Morocco
 
-AI legal assistant for Moroccan contracts, connecting clients with real advocates.
+LegalTech Morocco is a multi-surface hackathon project for Moroccan contract support. Users submit contract text, receive AI risk analysis, review advocate options, and decide whether to book legal help.
 
-Current repository state: this repo currently contains the standalone backend service in `agent-backend/`.
-The frontend and Firebase Functions app described below are part of the broader project plan but are not included here yet.
+## Repository Structure
 
-## Product Summary
+- `apps/static-web/`: static MVP frontend (HTML/CSS/JS)
+- `agent-backend/`: Express + TypeScript backend for AI endpoints
+- `apps/web-next/`: Next.js frontend prototype
+- `data/`: schema/data artifacts and seed scripts
 
-- Clients paste a contract and get AI risk analysis (Low, Medium, High)
-- Clients can view advocate suggestions and send a reservation request
-- Advocates receive case information and manage incoming leads
+## Product Flow
 
-## Plans
+1. User authenticates.
+2. User pastes contract text.
+3. Backend analyzes risk levels and problematic clauses.
+4. User reviews advocate profiles.
+5. User decides whether to reserve with an advocate.
 
-### Free Plan
+## API Endpoints
 
-- Contract input (text)
-- AI risk highlights (Low/Medium/High)
-- Short explanation for each risk
-- Advocate suggestion list
-
-## Core Pages
-
-- Login/Register (Client or Advocate)
-- Contract Analysis
-- Chat
-- Profile
-- Chat History
-- Advocate Suggestions
-- Reservation
-
-## Technologies
-
-- Frontend (planned): Next.js + TypeScript + Tailwind CSS
-- Backend (current in this repo): Node.js + Express + TypeScript (standalone service)
-- Auth and Database: Firebase Authentication + Cloud Firestore (https://firebase.google.com)
-- AI: Gemini API
-- Deployment (planned): Vercel (app) + Firebase
-
-## Backend Scope (MVP)
-
-- Gemini prompt-based legal risk analysis for Moroccan context
-- Role-based auth (client, advocate)
-- Contract analysis storage in Cloud Firestore
-- Advocate suggestions from seeded data
-- Reservation request creation
-
-## Included in This Repo Today
-
-- `agent-backend/` standalone API service
 - `GET /health`
 - `POST /api/chatbot/analyze-contract`
-- Optional Firestore persistence when Firebase service-account environment variables are configured
+- `POST /api/chatbot/message`
 
-Note: No custom model training in MVP. Use strong prompts and simple rules.
+## Dependencies
 
-## 6-Hour MVP Scope
+### Root Workspace
 
-1. Register/login with Firebase Auth
-2. Role selection (client or advocate)
-3. Contract text input + Gemini analysis
-4. Risk output with Low/Medium/High tags
-5. Advocate suggestions page (seeded)
-6. Reservation request form saved in Cloud Firestore
+Production dependencies:
 
-## 6-Hour Parallel Work Division (4 People)
+- `firebase@^12.12.0`
+- `firebase-admin@^13.8.0`
+- `firebase-tools@^15.14.0`
 
-### Person 1: Project Setup & Firebase Auth (130 min)
-- Create Next.js app, install Firebase SDK, Firebase Functions, Gemini SDK
-- Initialize Firebase project, enable Email/Password auth
-- Build auth helper functions (login, register, getCurrentUser, logout)
-- Set up auth state management context for Next.js
-- Create basic page layout/navigation structure
+Development dependencies:
 
-### Person 2: Firestore & Seeded Data (150 min)
-- Create Firestore collections: users, contractAnalyses, advocates, reservations, chatHistory
-- Define collection schemas (fields, types, indexes if needed)
-- Set up Firestore security rules (users can read/write own data, advocate public profiles readable)
-- Seed 5–10 advocates with name, specialty, rate, experience in Firestore
-- Build Firestore CRUD helper functions for all collections
+- `concurrently@^9.2.1`
+- `http-server@^14.1.1`
 
-### Person 3: Gemini API & Backend (160 min)
-- Set up Firebase Functions project locally
-- Create a callable Firebase Function for contract analysis
-- Write Gemini prompt for Moroccan contract risk analysis (Low/Medium/High)
-- Return JSON with risks array: [{ severity, clause, reason }]
-- Test Gemini API integration locally with sample contracts
+### Backend: `agent-backend/`
 
-### Person 4: All Frontend Interfaces (180 min)
-- Build Login page (email, password, role toggle, create account link)
-- Build Register page (email, password, role selection, submit)
-- Build Profile page (display user info, role, logout button)
-- Build Contract Analysis page (text input, submit, display risk output with severity tags)
-- Build Advocate Suggestions page (list advocates from Firestore in cards)
-- Build Reservation page (select advocate, submit reservation, save to Firestore)
-- Build Chat History page (list past analyses and reservations)
-- Add legal disclaimer banner
-- Style with Tailwind CSS for cohesive UX
+Production dependencies:
 
-### Final Sync (30 min)
-- Test end-to-end flow: Login → Upload Contract → Get Analysis → View Advocates → Reserve → Chat History
-- Deploy Next.js app to Vercel
-- Deploy Firebase Functions
-- Share live demo URL
+- `@google/generative-ai@^0.21.0`
+- `cors@^2.8.5`
+- `dotenv@^16.4.5`
+- `express@^4.21.1`
+- `firebase-admin@^12.7.0`
 
-## Blockers to Avoid
+Development dependencies:
 
-- Firestore security rules block reads → test in Firestore emulator first
-- Gemini API quota exhausted → use one shared API key or test with free tier quota
-- Firebase Functions cold start → deploy early for faster testing
+- `@types/cors@^2.8.17`
+- `@types/express@^4.17.21`
+- `@types/node@^22.10.1`
+- `tsx@^4.19.2`
+- `typescript@^5.7.2`
 
-## Suggested Improvements After Hackathon
+### Next App: `apps/web-next/`
 
-1. Add Arabic/French/English support
-2. Add advocate rating and reviews
-3. Add OCR for scanned contracts
-4. Add real payments and commission automation
-5. Add admin moderation dashboard
+Production dependencies:
 
-## Compliance
+- `firebase@^12.12.0`
+- `next@16.2.3`
+- `react@19.2.4`
+- `react-dom@19.2.4`
 
-- AI output is legal assistance, not final legal advice
-- Final decisions should be validated by a licensed advocate
+Development dependencies:
+
+- `@tailwindcss/postcss@^4`
+- `@types/node@^20`
+- `@types/react@^19`
+- `@types/react-dom@^19`
+- `eslint@^9`
+- `eslint-config-next@16.2.3`
+- `tailwindcss@^4`
+- `typescript@^5`
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+npm --prefix agent-backend install
+npm --prefix apps/web-next install
+```
+
+2. Create backend env file from template:
+
+```bash
+copy agent-backend/.env.example agent-backend/.env.local
+```
+
+3. Set required backend secret in `agent-backend/.env.local`:
+
+- `GEMINI_API_KEY`
+
+4. Run backend + static frontend:
+
+```bash
+npm run dev
+```
+
+5. Optional: run backend + static frontend + Next app:
+
+```bash
+npm run dev:all
+```
+
+## Data and Seeding
+
+- Seed advocates: `npm run seed:advocates`
+- Seed legal resources: `npm run seed:legal`
+- Seed scripts location: `data/seed-advocates.js`, `data/seed-legal-resources.js`
+
+## Security Notes
+
+- Never commit real keys.
+- Keep secrets only in local `.env` files.
+- `.env.local` is ignored by git.
+- Rotate leaked keys immediately.
+
+## Disclaimer
+
+AI output is legal assistance, not final legal advice. Final decisions should be validated by a licensed advocate.
