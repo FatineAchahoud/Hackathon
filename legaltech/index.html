@@ -110,7 +110,7 @@
             try {
                 const result = await login(email, password, role);
                 if (result.success) {
-                    window.location.href = 'profile.html';
+                    window.location.href = 'dashboard.html';
                 } else {
                     showError(result.error || 'Login failed');
                 }
