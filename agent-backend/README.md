@@ -42,7 +42,7 @@ Response body:
 
 ## Setup
 
-1. Copy `.env.example` to `.env`.
+1. Create or edit `.env.local`.
 2. Fill `GEMINI_API_KEY`.
 3. Optional: set `ALLOWED_ORIGINS` as a comma-separated list for CORS.
 4. Optional: fill Firebase service-account vars to enable Firestore save.

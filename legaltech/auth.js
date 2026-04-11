@@ -2,6 +2,14 @@
 // Note: This is a mock implementation. In production, integrate with Firebase Authentication.
 
 // Mock user storage
+const guestUser = {
+    uid: 'guest-user',
+    email: 'guest@legaltech.local',
+    role: 'guest',
+    createdAt: null,
+    isGuest: true
+};
+
 let currentUser = null;
 const users = new Map();
 
@@ -98,9 +106,13 @@ async function getCurrentUser() {
                     currentUser = JSON.parse(stored);
                     resolve(currentUser);
                 } catch (e) {
-                    resolve(null);
+                    currentUser = guestUser;
+                    resolve(guestUser);
                 }
             } else {
+                if (!currentUser) {
+                    currentUser = guestUser;
+                }
                 resolve(currentUser);
             }
         }, 100);
@@ -114,7 +126,7 @@ async function getCurrentUser() {
 async function logout() {
     return new Promise((resolve) => {
         setTimeout(() => {
-            currentUser = null;
+            currentUser = guestUser;
             sessionStorage.removeItem('currentUser');
             sessionStorage.removeItem('userId');
             resolve({ success: true });
