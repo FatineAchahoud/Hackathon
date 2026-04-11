@@ -1,0 +1,79 @@
+LEGALTECH FIRESTORE SETUP
+
+1) Collections Created
+- users
+- contractAnalyses
+- advocates
+- reservations
+- chatHistory
+
+2) Files
+- DATABASE.json: detailed schema and examples
+- DATABASE.js: firebase connection + create helpers + seedDemoData()
+
+3) Firebase Link Steps
+- Create Firebase project in console
+- Enable Firestore Database (Production or Test mode)
+- Enable Authentication > Email/Password
+- Copy Firebase web config and place in .env.local:
+  NEXT_PUBLIC_FIREBASE_API_KEY=...
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+  NEXT_PUBLIC_FIREBASE_APP_ID=...
+
+4) Install SDK
+- npm i firebase
+
+5) Use In App
+- Import db/helpers from DATABASE.js
+- Call createUser/createContractAnalysis/createAdvocate/createReservation/createChatHistory
+
+6) Optional Seed
+- Call seedDemoData() once from a script/page after env vars are valid
+
+7) Firestore Rules Starter (replace with strict production rules)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /contractAnalyses/{analysisId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    match /advocates/{advocateId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /reservations/{reservationId} {
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.clientId;
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.clientId ||
+         request.auth.uid == resource.data.advocateId);
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.clientId ||
+         request.auth.uid == resource.data.advocateId);
+    }
+
+    match /chatHistory/{chatId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid in resource.data.participants;
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.participants;
+    }
+  }
+}
+
+Note:
+- If advocates collection uses separate IDs (not auth uid), map advocate auth uid in user profile
+  and use that uid in reservations/chat access checks.

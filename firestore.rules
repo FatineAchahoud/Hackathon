@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // users: only authenticated owner can read/write own document
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // contractAnalyses: authenticated create; only owner can read/update
+    match /contractAnalyses/{analysisId} {
+      allow create: if isSignedIn();
+      allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // advocates: public read; no client-side writes
+    match /advocates/{advocateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // reservations: authenticated create; only participants can read; only client can update
+    match /reservations/{reservationId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() &&
+        (resource.data.clientId == request.auth.uid || resource.data.advocateId == request.auth.uid);
+      allow update: if isSignedIn() && resource.data.clientId == request.auth.uid;
+    }
+
+    // chatHistory: only listed participants can read/write
+    match /chatHistory/{chatId} {
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
+      allow read, update, delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+    }
+  }
+}

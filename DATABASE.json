@@ -1,0 +1,394 @@
+{
+  "$schemaVersion": "1.0.0",
+  "project": "legaltech-firestore",
+  "description": "Firestore collection schema and validation blueprint for LegalTech app.",
+  "collections": {
+    "users": {
+      "documentId": "uid (Firebase Auth UID)",
+      "required": ["uid", "name", "email", "role", "createdAt", "updatedAt"],
+      "fields": {
+        "uid": {
+          "type": "string",
+          "description": "Same as document ID and Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "normalized": "lowercase"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["client", "advocate"]
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        }
+      },
+      "example": {
+        "uid": "u_9TQ4kM0s3y",
+        "name": "Sara Benali",
+        "email": "sara.benali@example.com",
+        "role": "client",
+        "createdAt": "2026-04-11T00:00:00.000Z",
+        "updatedAt": "2026-04-11T00:00:00.000Z"
+      },
+      "indexes": [
+        {
+          "type": "single-field",
+          "field": "email",
+          "usage": "Find user by email."
+        },
+        {
+          "type": "single-field",
+          "field": "role",
+          "usage": "Filter users by role."
+        }
+      ]
+    },
+    "contractAnalyses": {
+      "documentId": "id (auto-generated or UUID)",
+      "required": [
+        "id",
+        "userId",
+        "contractText",
+        "riskLevel",
+        "risks",
+        "date",
+        "createdAt"
+      ],
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "Optional duplicate of doc ID for easier frontend handling."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to users/{uid}."
+        },
+        "contractText": {
+          "type": "string",
+          "minLength": 50
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High"]
+        },
+        "risks": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": ["clause", "reason"],
+            "properties": {
+              "clause": {
+                "type": "string",
+                "description": "Clause text or title detected as risky."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Short legal explanation of why it is risky."
+              }
+            }
+          }
+        },
+        "date": {
+          "type": "timestamp",
+          "description": "When analysis result was produced."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        }
+      },
+      "example": {
+        "id": "analysis_001",
+        "userId": "u_9TQ4kM0s3y",
+        "contractText": "The tenant waives all rights to challenge unilateral rent increases...",
+        "riskLevel": "High",
+        "risks": [
+          {
+            "clause": "Unilateral rent adjustment",
+            "reason": "Allows one-sided changes without clear notice or cap."
+          },
+          {
+            "clause": "Liability disclaimer",
+            "reason": "Overly broad limitation may be unenforceable."
+          }
+        ],
+        "date": "2026-04-11T00:10:00.000Z",
+        "createdAt": "2026-04-11T00:10:00.000Z"
+      },
+      "indexes": [
+        {
+          "type": "single-field",
+          "field": "userId",
+          "usage": "List analyses by user."
+        },
+        {
+          "type": "composite",
+          "fields": ["userId", "date desc"],
+          "usage": "Latest analyses for one user."
+        },
+        {
+          "type": "single-field",
+          "field": "riskLevel",
+          "usage": "Filter by risk severity."
+        }
+      ]
+    },
+    "advocates": {
+      "documentId": "id (auto-generated or UUID)",
+      "required": [
+        "id",
+        "name",
+        "specialty",
+        "rate",
+        "experience",
+        "location",
+        "isActive"
+      ],
+      "fields": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "specialty": {
+          "type": "string",
+          "description": "e.g., Contract Law, Labor Law, Corporate Law."
+        },
+        "rate": {
+          "type": "number",
+          "description": "Hourly rate in MAD."
+        },
+        "experience": {
+          "type": "number",
+          "description": "Years of legal experience.",
+          "minimum": 0
+        },
+        "location": {
+          "type": "string",
+          "description": "City or region."
+        },
+        "isActive": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "example": {
+        "id": "adv_001",
+        "name": "Mehdi El Idrissi",
+        "specialty": "Contract Law",
+        "rate": 700,
+        "experience": 8,
+        "location": "Casablanca",
+        "isActive": true
+      },
+      "indexes": [
+        {
+          "type": "single-field",
+          "field": "specialty",
+          "usage": "Filter advocates by specialty."
+        },
+        {
+          "type": "single-field",
+          "field": "location",
+          "usage": "Filter by city."
+        },
+        {
+          "type": "composite",
+          "fields": ["specialty", "location", "rate asc"],
+          "usage": "Show affordable advocates in area by specialty."
+        }
+      ]
+    },
+    "reservations": {
+      "documentId": "id (auto-generated or UUID)",
+      "required": [
+        "id",
+        "clientId",
+        "advocateId",
+        "status",
+        "timestamp",
+        "createdAt",
+        "updatedAt"
+      ],
+      "fields": {
+        "id": {
+          "type": "string"
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to users/{uid}, where role == client."
+        },
+        "advocateId": {
+          "type": "string",
+          "description": "Reference to advocates/{id}."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected", "cancelled", "completed"]
+        },
+        "timestamp": {
+          "type": "timestamp",
+          "description": "Reservation event date/time."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000,
+          "optional": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        }
+      },
+      "example": {
+        "id": "res_001",
+        "clientId": "u_9TQ4kM0s3y",
+        "advocateId": "adv_001",
+        "status": "pending",
+        "timestamp": "2026-04-12T14:00:00.000Z",
+        "note": "Need review of rental agreement.",
+        "createdAt": "2026-04-11T00:20:00.000Z",
+        "updatedAt": "2026-04-11T00:20:00.000Z"
+      },
+      "indexes": [
+        {
+          "type": "single-field",
+          "field": "clientId",
+          "usage": "List reservations per client."
+        },
+        {
+          "type": "single-field",
+          "field": "advocateId",
+          "usage": "List reservations per advocate."
+        },
+        {
+          "type": "composite",
+          "fields": ["advocateId", "status", "timestamp desc"],
+          "usage": "Advocate dashboard queue."
+        }
+      ]
+    },
+    "chatHistory": {
+      "documentId": "id (auto-generated or UUID)",
+      "required": ["id", "participants", "messages", "createdAt", "updatedAt"],
+      "fields": {
+        "id": {
+          "type": "string"
+        },
+        "participants": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "description": "UIDs of participants. Prefer [clientId, advocateId]."
+          }
+        },
+        "participantPairKey": {
+          "type": "string",
+          "description": "Sorted key like 'clientUid_advocateUid' for unique conversation lookup."
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["senderId", "text", "timestamp"],
+            "properties": {
+              "senderId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "timestamp": {
+                "type": "timestamp"
+              },
+              "readBy": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "optional": true
+              }
+            }
+          }
+        },
+        "reservationId": {
+          "type": "string",
+          "optional": true,
+          "description": "Optional reference to reservations/{id} if chat is tied to a booking."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "source": "serverTimestamp"
+        }
+      },
+      "example": {
+        "id": "chat_001",
+        "participants": ["u_9TQ4kM0s3y", "adv_001_user_uid"],
+        "participantPairKey": "adv_001_user_uid_u_9TQ4kM0s3y",
+        "messages": [
+          {
+            "senderId": "u_9TQ4kM0s3y",
+            "text": "Hello, I need help with a service contract.",
+            "timestamp": "2026-04-11T00:30:00.000Z",
+            "readBy": ["u_9TQ4kM0s3y"]
+          },
+          {
+            "senderId": "adv_001_user_uid",
+            "text": "Sure, please share the key clauses you are concerned about.",
+            "timestamp": "2026-04-11T00:31:00.000Z",
+            "readBy": ["adv_001_user_uid"]
+          }
+        ],
+        "reservationId": "res_001",
+        "createdAt": "2026-04-11T00:30:00.000Z",
+        "updatedAt": "2026-04-11T00:31:00.000Z"
+      },
+      "indexes": [
+        {
+          "type": "single-field",
+          "field": "participantPairKey",
+          "usage": "Find one chat thread between two users quickly."
+        },
+        {
+          "type": "single-field",
+          "field": "updatedAt",
+          "usage": "Sort chat list by latest activity."
+        }
+      ]
+    }
+  },
+  "firestoreRulesGuidance": {
+    "users": "User can read/write own profile. Admin can read all.",
+    "contractAnalyses": "Only owner userId can read/write.",
+    "advocates": "Public read allowed, write restricted to admin.",
+    "reservations": "Client and related advocate can read; status updates restricted by role.",
+    "chatHistory": "Only listed participants can read/write messages."
+  }
+}
