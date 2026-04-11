@@ -14,15 +14,12 @@ dist/
 **/.env.local
 **/.env.*
 
-# Keep env templates tracked
-!.env.example
-!**/.env.example
-
 # Logs
 firebase-debug.log
 firebase-debug.*.log
 
 # Standalone agent backend
 agent-backend/.env
+agent-backend/.env.local
 
 
