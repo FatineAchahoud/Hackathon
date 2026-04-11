@@ -1,0 +1,12 @@
+{
+  "name": "hackathon-root",
+  "private": true,
+  "workspaces": [
+    "agent-backend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w agent-backend",
+    "build:backend": "npm run build -w agent-backend",
+    "check:backend": "npm run check -w agent-backend"
+  }
+}
