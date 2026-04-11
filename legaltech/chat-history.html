@@ -84,12 +84,16 @@
     <script src="auth.js"></script>
     <script src="firestore.js"></script>
     <script>
+        let currentUserId = null;
+
         async function initPage() {
             const user = await getCurrentUser();
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
+
+            currentUserId = user.uid;
 
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
             
@@ -112,13 +116,13 @@
                 reservationsSection.classList.add('hidden');
                 analysesTab.className = 'px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 cursor-pointer';
                 reservationsTab.className = 'px-6 py-3 font-semibold text-gray-600 hover:text-blue-600 cursor-pointer';
-                loadAnalyses(sessionStorage.getItem('userId'));
+                loadAnalyses(currentUserId);
             } else {
                 analysesSection.classList.add('hidden');
                 reservationsSection.classList.remove('hidden');
                 analysesTab.className = 'px-6 py-3 font-semibold text-gray-600 hover:text-blue-600 cursor-pointer';
                 reservationsTab.className = 'px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 cursor-pointer';
-                loadReservations(sessionStorage.getItem('userId'));
+                loadReservations(currentUserId);
             }
         }
 
