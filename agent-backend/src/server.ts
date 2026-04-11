@@ -4,7 +4,7 @@ import express, { type Request, type Response } from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { saveContractAnalysis, canUseFirestore, initFirestoreIfConfigured } from "./firebase";
-import { analyzeContractWithGemini, generateChatReply } from "./gemini";
+import { analyzeContractWithGemini, buildFallbackContractAnalysis, generateChatReply } from "./gemini";
 import type { AnalyzeContractRequest, ChatbotMessageRequest } from "./types";
 
 function loadEnvironment(): void {
@@ -28,41 +28,17 @@ function loadEnvironment(): void {
 loadEnvironment();
 
 const app = express();
-const port = Number(process.env.PORT || 8080);
+const port = 5000;
 const apiKey = process.env.GEMINI_API_KEY?.trim() ?? "";
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((v) => v.trim())
-  .filter(Boolean);
-
-function isLocalOrigin(origin: string): boolean {
-  try {
-    const url = new URL(origin);
-    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  } catch {
-    return false;
-  }
-}
-
 app.use(express.json({ limit: "2mb" }));
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin) || isLocalOrigin(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error("Origin not allowed by CORS"));
-    }
-  })
-);
+app.use(cors());
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({
     ok: true,
     service: "legaltech-agent-backend",
-    model: "gemini-1.5-flash",
+    model: "gemini-2.0-flash",
     firestoreConfigured: canUseFirestore()
   });
 });
@@ -83,12 +59,31 @@ app.post("/api/chatbot/analyze-contract", async (req: Request, res: Response) =>
       return;
     }
 
-    const analysis = await analyzeContractWithGemini({
-      apiKey,
-      contractText,
-      contractTypeHint,
-      language
-    });
+    let analysis;
+    try {
+      analysis = await analyzeContractWithGemini({
+        apiKey,
+        contractText,
+        contractTypeHint,
+        language
+      });
+    } catch (analysisError) {
+      console.error("Gemini analysis failed, using backend fallback analysis", analysisError);
+      analysis = buildFallbackContractAnalysis({
+        contractText,
+        contractTypeHint
+      });
+
+      const statusCode =
+        typeof analysisError === "object" && analysisError !== null && "status" in analysisError
+          ? Number((analysisError as { status?: unknown }).status)
+          : NaN;
+
+      if (statusCode === 429) {
+        analysis.summary =
+          "AI quota exceeded right now (Gemini rate limit). This is a backend fallback analysis; retry shortly or use a higher-quota API key.";
+      }
+    }
 
     const analysisId = await saveContractAnalysis({
       userId,

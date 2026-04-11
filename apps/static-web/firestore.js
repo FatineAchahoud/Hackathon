@@ -301,107 +301,54 @@ async function getReservationsCount(userId) {
 }
 
 /**
- * Analyze contract via backend API with local fallback
+ * Analyze contract via backend API
  */
 async function analyzeContract(contractText) {
-    const backendBaseUrls = [
-        'http://localhost:8080',
-        'http://127.0.0.1:8080'
-    ];
+    const endpoint = 'http://localhost:5000/api/chatbot/analyze-contract';
 
-    let lastBackendError = null;
-    let hadReachableBackend = false;
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contractText,
+                language: 'en'
+            })
+        });
 
-    for (const baseUrl of backendBaseUrls) {
-        try {
-            const response = await fetch(`${baseUrl}/api/chatbot/analyze-contract`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contractText,
-                    language: 'en'
-                })
-            });
+        const payload = await response.json().catch(() => null);
 
-            hadReachableBackend = true;
-
-            const payload = await response.json();
-
-            if (!response.ok || !payload?.ok || !payload?.analysis) {
-                lastBackendError = payload?.error || 'Backend analysis failed';
-                continue;
-            }
-
-            const analysis = payload.analysis;
-            const mappedRisks = Array.isArray(analysis.risks)
-                ? analysis.risks.map((item) => ({
-                    severity: item.severity || 'Medium',
-                    clause: item.clause || 'Unspecified clause',
-                    reason: item.reason || 'Potential legal uncertainty detected.'
-                }))
-                : [];
-
+        if (!response.ok || !payload?.ok || !payload?.analysis) {
             return {
-                success: true,
-                data: {
-                    risks: mappedRisks,
-                    summary: analysis.summary || 'Contract analysis completed.'
-                }
+                success: false,
+                error: payload?.error || 'Backend analysis failed'
             };
-        } catch (error) {
-            if (error?.name === 'TypeError' || error?.name === 'AbortError') {
-                console.warn(`Analysis backend request failed for ${baseUrl}`, error);
-                continue;
-            }
-
-            lastBackendError = error?.message || 'Backend analysis failed';
         }
-    }
 
-    if (hadReachableBackend && lastBackendError) {
+        const analysis = payload.analysis;
+        const mappedRisks = Array.isArray(analysis.risks)
+            ? analysis.risks.map((item) => ({
+                severity: item.severity || 'Medium',
+                clause: item.clause || 'Unspecified clause',
+                reason: item.reason || 'Potential legal uncertainty detected.'
+            }))
+            : [];
+
+        return {
+            success: true,
+            data: {
+                risks: mappedRisks,
+                summary: analysis.summary || 'Contract analysis completed.'
+            }
+        };
+    } catch (error) {
         return {
             success: false,
-            error: lastBackendError
+            error: error?.message || 'Failed to reach backend API'
         };
     }
-
-    const mockRisks = [
-        {
-            severity: 'High',
-            clause: 'Payment Terms',
-            reason: 'No late payment penalties specified. Consider adding interest charges.'
-        },
-        {
-            severity: 'High',
-            clause: 'Liability Limitation',
-            reason: 'Unlimited liability clause could expose your business to significant risk.'
-        },
-        {
-            severity: 'Medium',
-            clause: 'Termination Conditions',
-            reason: 'Termination clause lacks specific notice period. Recommend a fixed notice period.'
-        },
-        {
-            severity: 'Medium',
-            clause: 'Dispute Resolution',
-            reason: 'Missing arbitration or mediation clause. Consider adding one for smoother conflict resolution.'
-        },
-        {
-            severity: 'Low',
-            clause: 'Confidentiality',
-            reason: 'Scope of confidentiality could be defined more precisely.'
-        }
-    ];
-
-    return {
-        success: true,
-        data: {
-            risks: mockRisks,
-            summary: 'Backend is unreachable. Displaying local fallback analysis based on common contract risks.'
-        }
-    };
 }
 
 /**

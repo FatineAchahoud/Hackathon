@@ -219,7 +219,7 @@ export async function analyzeContractWithGemini(params: {
 
   const client = new GoogleGenerativeAI(apiKey);
   const model = client.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.0-flash",
     systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0.2,
@@ -239,9 +239,76 @@ export async function analyzeContractWithGemini(params: {
     .join("\n\n");
 
   const result = await model.generateContent(prompt);
-  const raw = result.response.text();
-  const parsed = extractJsonObject(raw);
+  const responseText = result.response.text();
+  const cleaned = responseText.replace(/```json|```|\n/g, "").trim();
+  const parsed = extractJsonObject(cleaned);
   return validateAnalysisShape(parsed);
+}
+
+export function buildFallbackContractAnalysis(params: {
+  contractText: string;
+  contractTypeHint?: string;
+}): ContractAnalysis {
+  const { contractText, contractTypeHint = "" } = params;
+  const lower = contractText.toLowerCase();
+
+  const risks: ContractAnalysis["risks"] = [];
+
+  if (lower.includes("non-compete") || lower.includes("non compete") || lower.includes("concurrent")) {
+    risks.push({
+      severity: "High",
+      clause: "Non-compete restrictions",
+      reason: "Broad post-termination restrictions without narrow scope or compensation may be challenged for imbalance.",
+      suggestion: "Limit geography and duration, and add fair compensation where appropriate."
+    });
+  }
+
+  if (lower.includes("60 hours") || lower.includes("overtime") || lower.includes("heures supplémentaires")) {
+    risks.push({
+      severity: "High",
+      clause: "Working time and overtime",
+      reason: "Overtime waiver language may conflict with mandatory labor protections.",
+      suggestion: "Align overtime terms with mandatory labor-law limits and compensation rules."
+    });
+  }
+
+  if (lower.includes("liability") || lower.includes("indemn") || lower.includes("responsabil")) {
+    risks.push({
+      severity: "Medium",
+      clause: "Liability allocation",
+      reason: "Unclear or one-sided liability wording can increase dispute risk.",
+      suggestion: "Define caps, exclusions, and clear indemnity triggers."
+    });
+  }
+
+  if (lower.includes("termination") || lower.includes("résiliation") || lower.includes("cancel")) {
+    risks.push({
+      severity: "Medium",
+      clause: "Termination conditions",
+      reason: "Missing notice periods and post-termination duties can create ambiguity.",
+      suggestion: "State notice period, grounds for termination, and post-termination obligations."
+    });
+  }
+
+  if (risks.length === 0) {
+    risks.push({
+      severity: "Medium",
+      clause: "General drafting clarity",
+      reason: "Contract text should be reviewed for enforceability, proportionality, and mandatory legal compliance.",
+      suggestion: "Clarify obligations, payment terms, liability limits, and dispute resolution process."
+    });
+  }
+
+  const hasHigh = risks.some((risk) => risk.severity === "High");
+  const hasMedium = risks.some((risk) => risk.severity === "Medium");
+
+  return {
+    contract_type: contractTypeHint || "General Contract",
+    overall_risk: hasHigh ? "High" : hasMedium ? "Medium" : "Low",
+    summary:
+      "Fallback analysis generated locally because AI provider was unavailable. Review highlighted clauses with a licensed Moroccan advocate before signing.",
+    risks
+  };
 }
 
 export async function generateChatReply(params: {
@@ -284,7 +351,7 @@ export async function generateChatReply(params: {
 
     if (looksLikeContractText(trimmedMessage)) {
       const contractModel = client.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         systemInstruction: CONTRACT_CHAT_SYSTEM_INSTRUCTION,
         generationConfig: {
           temperature: 0.2,
@@ -338,7 +405,7 @@ export async function generateChatReply(params: {
     }
 
     const model = client.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       systemInstruction: CHAT_SYSTEM_INSTRUCTION,
       generationConfig: {
         temperature: 0.4,
